@@ -1,0 +1,674 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 기본 스타일 */
+:root {
+  --pixel-bg: #0f0f23;
+  --pixel-bg-secondary: #1a1a3e;
+  --pixel-card: #1e1e4a;
+  --pixel-card-hover: #2a2a5a;
+  --pixel-border: #3d3d7a;
+  --pixel-border-light: #5a5a9a;
+  --pixel-primary: #00d4ff;
+  --pixel-primary-dark: #00a3c4;
+  --pixel-secondary: #ff6b9d;
+  --pixel-accent: #ffd93d;
+  --pixel-accent-dark: #e6c235;
+  --pixel-success: #6bcb77;
+  --pixel-xp: #a855f7;
+  --pixel-xp-light: #c084fc;
+  --pixel-text: #e8e8ff;
+  --pixel-text-muted: #8888aa;
+  --glow-primary: 0 0 20px rgba(0, 212, 255, 0.5);
+  --glow-accent: 0 0 20px rgba(255, 217, 61, 0.5);
+  --glow-xp: 0 0 20px rgba(168, 85, 247, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--pixel-bg);
+  background-image:
+    radial-gradient(ellipse at top, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(0, 212, 255, 0.08) 0%, transparent 50%);
+  min-height: 100vh;
+  color: var(--pixel-text);
+}
+
+/* 픽셀 폰트 */
+.font-pixel {
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 1px;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* 글래스모피즘 카드 */
+.glass-card {
+  background: linear-gradient(135deg, rgba(30, 30, 74, 0.9) 0%, rgba(26, 26, 62, 0.8) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(90, 90, 154, 0.3);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* 픽셀 박스 - 개선된 버전 */
+.pixel-box {
+  background: linear-gradient(180deg, var(--pixel-card) 0%, rgba(26, 26, 62, 0.95) 100%);
+  border: 2px solid var(--pixel-border);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pixel-box-hover:hover {
+  transform: translateY(-4px);
+  border-color: var(--pixel-border-light);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(0, 212, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 하이라이트 카드 */
+.highlight-card {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+/* 픽셀 버튼 - 개선된 버전 */
+.pixel-btn {
+  @apply font-medium text-sm px-6 py-3 transition-all duration-200;
+  background: linear-gradient(180deg, var(--pixel-primary) 0%, var(--pixel-primary-dark) 100%);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 6px 20px rgba(0, 212, 255, 0.3);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pixel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 0 rgba(0, 0, 0, 0.3),
+    0 10px 30px rgba(0, 212, 255, 0.4);
+}
+
+.pixel-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.3),
+    0 4px 10px rgba(0, 212, 255, 0.2);
+}
+
+.pixel-btn-secondary {
+  background: linear-gradient(180deg, var(--pixel-secondary) 0%, #e05588 100%);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 6px 20px rgba(255, 107, 157, 0.3);
+}
+
+.pixel-btn-accent {
+  background: linear-gradient(180deg, var(--pixel-accent) 0%, var(--pixel-accent-dark) 100%);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 6px 20px rgba(255, 217, 61, 0.3);
+}
+
+/* XP 바 - 개선된 버전 */
+.xp-bar {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--pixel-border);
+  border-radius: 10px;
+  overflow: hidden;
+  height: 16px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.xp-bar-fill {
+  background: linear-gradient(90deg,
+    var(--pixel-xp) 0%,
+    var(--pixel-xp-light) 50%,
+    var(--pixel-xp) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+  height: 100%;
+  transition: width 0.5s ease-out;
+  position: relative;
+  border-radius: 8px;
+  box-shadow: 0 0 10px var(--pixel-xp);
+}
+
+.xp-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 레벨 뱃지 - 개선된 버전 */
+.level-badge {
+  @apply inline-flex items-center justify-center font-bold;
+  background: linear-gradient(135deg, var(--pixel-accent) 0%, #ffaa00 50%, var(--pixel-accent) 100%);
+  color: #1a1a2e;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow:
+    0 4px 15px rgba(255, 217, 61, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  font-size: 1rem;
+}
+
+/* 스탯 카드 */
+.stat-card {
+  @apply pixel-box p-4 text-center;
+  background: linear-gradient(180deg, rgba(30, 30, 74, 0.8) 0%, rgba(20, 20, 50, 0.9) 100%);
+}
+
+.stat-card:hover {
+  border-color: var(--pixel-primary);
+  box-shadow: var(--glow-primary);
+}
+
+.stat-value {
+  @apply text-3xl font-bold;
+  background: linear-gradient(135deg, var(--pixel-primary) 0%, var(--pixel-xp) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-label {
+  @apply text-sm mt-1;
+  color: var(--pixel-text-muted);
+}
+
+/* 사이드바 네비게이션 */
+.nav-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200;
+  color: var(--pixel-text-muted);
+}
+
+.nav-item:hover {
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--pixel-text);
+}
+
+.nav-item-active {
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.2) 0%, transparent 100%);
+  color: var(--pixel-primary);
+  border-left: 3px solid var(--pixel-primary);
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pixel-bg);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--pixel-border) 0%, var(--pixel-border-light) 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pixel-primary);
+}
+
+/* 애니메이션 */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--pixel-primary), 0 0 10px rgba(0, 212, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px var(--pixel-primary), 0 0 30px rgba(0, 212, 255, 0.5);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* 업적 팝업 */
+.achievement-popup {
+  @apply fixed top-4 right-4 z-50;
+  animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 레벨업 효과 */
+.levelup-overlay {
+  @apply fixed inset-0 flex items-center justify-center z-50;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, rgba(0, 0, 0, 0.9) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.levelup-content {
+  animation: levelUpBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes levelUpBounce {
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.1) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* 스킬트리 노드 */
+.skill-node {
+  @apply relative cursor-pointer transition-all duration-300;
+  border-radius: 12px;
+}
+
+.skill-node-locked {
+  @apply opacity-40;
+  filter: grayscale(80%);
+}
+
+.skill-node-available {
+  animation: pulse-glow 2s ease-in-out infinite;
+  border: 2px solid var(--pixel-primary);
+}
+
+.skill-node-unlocked {
+  border: 2px solid var(--pixel-success);
+  box-shadow: 0 0 15px rgba(107, 203, 119, 0.4);
+}
+
+/* 태스크 아이템 */
+.task-item {
+  @apply pixel-box p-4 mb-3 cursor-pointer;
+}
+
+.task-item:hover {
+  transform: translateX(4px);
+  border-left: 3px solid var(--pixel-primary);
+}
+
+.task-item-done {
+  @apply opacity-60;
+  border-left: 3px solid var(--pixel-success);
+}
+
+/* 난이도 색상 */
+.difficulty-trivial { color: #6b7280; }
+.difficulty-easy { color: #10b981; }
+.difficulty-medium { color: #f59e0b; }
+.difficulty-hard { color: #ef4444; }
+.difficulty-epic {
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 희귀도 배지 */
+.rarity-badge {
+  @apply px-2 py-1 rounded text-xs font-medium;
+}
+
+.rarity-common {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
+.rarity-uncommon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.rarity-rare {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.rarity-epic {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+.rarity-legendary {
+  background: linear-gradient(135deg, rgba(255, 217, 61, 0.2), rgba(255, 170, 0, 0.2));
+  color: #ffd93d;
+  border: 1px solid rgba(255, 217, 61, 0.4);
+}
+
+/* 업적 희귀도 */
+.achievement-bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #a0522d 100%);
+  box-shadow: 0 4px 15px rgba(205, 127, 50, 0.4);
+}
+.achievement-silver {
+  background: linear-gradient(135deg, #e8e8e8 0%, #a8a8a8 100%);
+  box-shadow: 0 4px 15px rgba(192, 192, 192, 0.4);
+}
+.achievement-gold {
+  background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+.achievement-platinum {
+  background: linear-gradient(135deg, #e5e4e2 0%, #c0c0c0 100%);
+  box-shadow: 0 4px 15px rgba(229, 228, 226, 0.4);
+}
+.achievement-diamond {
+  background: linear-gradient(135deg, #b9f2ff 0%, #87ceeb 100%);
+  box-shadow: 0 4px 15px rgba(185, 242, 255, 0.4);
+}
+
+/* 프로그레스 링 */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease;
+  stroke-linecap: round;
+}
+
+/* 아바타 프레임 */
+.avatar-frame {
+  @apply relative;
+  background: linear-gradient(135deg, var(--pixel-card) 0%, var(--pixel-bg-secondary) 100%);
+  border: 3px solid var(--pixel-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.avatar-frame::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--pixel-primary), var(--pixel-xp));
+  border-radius: 18px;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* 연속 출석 불꽃 효과 */
+.streak-fire {
+  filter: drop-shadow(0 0 8px rgba(255, 107, 0, 0.6));
+  animation: flicker 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes flicker {
+  0% { filter: drop-shadow(0 0 8px rgba(255, 107, 0, 0.6)); }
+  100% { filter: drop-shadow(0 0 12px rgba(255, 170, 0, 0.8)); }
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .font-pixel {
+    font-size: 0.625rem;
+  }
+
+  .pixel-box {
+    border-radius: 8px;
+  }
+
+  .level-badge {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
+  }
+}
+
+/* 선택 방지 (게임 느낌) */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 그라데이션 텍스트 */
+.gradient-text {
+  background: linear-gradient(135deg, var(--pixel-primary) 0%, var(--pixel-xp) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, var(--pixel-accent) 0%, #ffaa00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 주요 버튼 스타일 */
+.btn-primary {
+  @apply font-medium text-sm transition-all duration-200 rounded-xl;
+  background: linear-gradient(135deg, var(--pixel-primary) 0%, #00a3c4 100%);
+  color: #000;
+  font-weight: 600;
+  box-shadow:
+    0 4px 15px rgba(0, 212, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 25px rgba(0, 212, 255, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary {
+  @apply font-medium text-sm transition-all duration-200 rounded-xl;
+  background: linear-gradient(135deg, var(--pixel-card) 0%, var(--pixel-bg-secondary) 100%);
+  color: var(--pixel-text);
+  border: 1px solid var(--pixel-border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary:hover {
+  border-color: var(--pixel-primary);
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2);
+}
+
+/* 업적 진행 바 */
+.achievement-progress {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--pixel-border);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 20px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.achievement-progress-fill {
+  background: linear-gradient(90deg,
+    #ffd700 0%,
+    #ffaa00 50%,
+    #ffd700 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+  height: 100%;
+  transition: width 0.5s ease-out;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  position: relative;
+}
+
+.achievement-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+  border-radius: 10px 10px 0 0;
+}
+
+/* 카테고리 탭 버튼 */
+.category-tab {
+  @apply flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all duration-200;
+  background: var(--pixel-card);
+  color: var(--pixel-text-muted);
+  border: 1px solid transparent;
+}
+
+.category-tab:hover {
+  color: var(--pixel-text);
+  background: var(--pixel-card-hover);
+}
+
+.category-tab-active {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+  color: var(--pixel-primary);
+  border-color: var(--pixel-primary);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+/* 입력 필드 */
+.input-field {
+  @apply w-full px-4 py-3 rounded-xl transition-all duration-200;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--pixel-border);
+  color: var(--pixel-text);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--pixel-primary);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+}
+
+.input-field::placeholder {
+  color: var(--pixel-text-muted);
+}
+
+/* 토글 스위치 */
+.toggle-switch {
+  @apply relative w-12 h-6 rounded-full cursor-pointer transition-all duration-200;
+  background: var(--pixel-border);
+}
+
+.toggle-switch-active {
+  background: var(--pixel-primary);
+}
+
+.toggle-switch::after {
+  content: '';
+  @apply absolute top-1 left-1 w-4 h-4 rounded-full transition-all duration-200;
+  background: white;
+}
+
+.toggle-switch-active::after {
+  transform: translateX(24px);
+}
+
+/* 툴팁 */
+.tooltip {
+  @apply absolute z-50 px-3 py-2 text-sm rounded-lg;
+  background: var(--pixel-card);
+  border: 1px solid var(--pixel-border);
+  color: var(--pixel-text);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 뱃지 */
+.badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--pixel-primary);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.badge-success {
+  background: rgba(107, 203, 119, 0.2);
+  color: var(--pixel-success);
+  border: 1px solid rgba(107, 203, 119, 0.3);
+}
+
+.badge-warning {
+  background: rgba(255, 217, 61, 0.2);
+  color: var(--pixel-accent);
+  border: 1px solid rgba(255, 217, 61, 0.3);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
