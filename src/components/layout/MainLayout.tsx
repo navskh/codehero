@@ -9,8 +9,6 @@ interface IMainLayoutProps {
 const navItems = [
   { path: '/', label: '홈', icon: '🏠' },
   { path: '/tasks', label: '태스크', icon: '📋' },
-  { path: '/notes', label: '학습', icon: '📚' },
-  { path: '/goals', label: '목표', icon: '🎯' },
   { path: '/avatar', label: '아바타', icon: '👤' },
   { path: '/skills', label: '스킬', icon: '🌳' },
   { path: '/achievements', label: '업적', icon: '🏆' },
