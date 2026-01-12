@@ -10,8 +10,6 @@ const navItems = [
   { path: '/', label: '홈', icon: '🏠' },
   { path: '/tasks', label: '태스크', icon: '📋' },
   { path: '/avatar', label: '아바타', icon: '👤' },
-  { path: '/skills', label: '스킬', icon: '🌳' },
-  { path: '/achievements', label: '업적', icon: '🏆' },
 ];
 
 export function MainLayout({ children }: IMainLayoutProps) {

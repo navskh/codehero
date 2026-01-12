@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PixelBox } from '../components/common/PixelBox';
 import { useAvatarStore, useGameStore } from '../stores';
 import type { ItemCategory } from '../types';
@@ -11,6 +11,39 @@ const categories: { id: ItemCategory; label: string; icon: string }[] = [
   { id: 'background', label: '배경', icon: '🖼️' },
   { id: 'effect', label: '이펙트', icon: '✨' },
 ];
+
+// 아이템 ID별 이모지 매핑
+const ITEM_EMOJIS: Record<string, string> = {
+  // 헤어
+  hair_short_black: '👨',
+  hair_messy: '🧑‍💻',
+  hair_long: '👩',
+  // 의상
+  outfit_casual: '👕',
+  outfit_hoodie: '🧥',
+  outfit_suit: '🤵',
+  // 악세서리
+  acc_glasses: '👓',
+  acc_headphones: '🎧',
+  acc_coffee: '☕',
+  // 배경
+  bg_office: '🏢',
+  bg_home: '🏠',
+  bg_server: '🖥️',
+  // 이펙트
+  effect_sparkle: '✨',
+  effect_flame: '🔥',
+  effect_rainbow: '🌈',
+};
+
+// 카테고리별 기본 이모지
+const DEFAULT_CATEGORY_EMOJIS: Record<ItemCategory, string> = {
+  hair: '👨',
+  outfit: '👕',
+  accessory: '',
+  background: '',
+  effect: '',
+};
 
 export function Avatar() {
   const [activeCategory, setActiveCategory] = useState<ItemCategory>('hair');
@@ -29,6 +62,22 @@ export function Avatar() {
     return 'locked';
   };
 
+  // 장착 아이템에 따른 이모지 조합 계산
+  const avatarEmojis = useMemo(() => {
+    const { hair, outfit, accessory, background, effect } = avatar.equipment;
+    return {
+      background: background ? ITEM_EMOJIS[background] || '' : '',
+      character: outfit ? ITEM_EMOJIS[outfit] || '👨‍💻' : hair ? ITEM_EMOJIS[hair] || '👨‍💻' : '👨‍💻',
+      accessory: accessory ? ITEM_EMOJIS[accessory] || '' : '',
+      effect: effect ? ITEM_EMOJIS[effect] || '' : '',
+    };
+  }, [avatar.equipment]);
+
+  // 아이템별 이모지 가져오기
+  const getItemEmoji = (itemId: string, category: ItemCategory) => {
+    return ITEM_EMOJIS[itemId] || DEFAULT_CATEGORY_EMOJIS[category] || '❓';
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
@@ -40,8 +89,36 @@ export function Avatar() {
         {/* 아바타 프리뷰 */}
         <div className="col-span-12 md:col-span-5">
           <PixelBox variant="gradient" className="p-6">
-            <div className="aspect-square rounded-2xl bg-gradient-to-br from-[rgba(0,212,255,0.1)] to-[rgba(168,85,247,0.1)] border border-[rgba(90,90,154,0.3)] flex items-center justify-center mb-5">
-              <div className="text-8xl pixelated animate-float">👨‍💻</div>
+            {/* 이모지 조합 프리뷰 */}
+            <div className="aspect-square rounded-2xl bg-gradient-to-br from-[rgba(0,212,255,0.1)] to-[rgba(168,85,247,0.1)] border border-[rgba(90,90,154,0.3)] flex items-center justify-center mb-5 relative overflow-hidden">
+              {/* 배경 레이어 */}
+              {avatarEmojis.background && (
+                <div className="absolute inset-0 flex items-center justify-center text-[120px] opacity-30">
+                  {avatarEmojis.background}
+                </div>
+              )}
+
+              {/* 캐릭터 + 이펙트 조합 */}
+              <div className="relative z-10 flex flex-col items-center">
+                {/* 이펙트 (상단) */}
+                {avatarEmojis.effect && (
+                  <div className="absolute -top-4 text-4xl animate-pulse">
+                    {avatarEmojis.effect}
+                  </div>
+                )}
+
+                {/* 메인 캐릭터 */}
+                <div className="text-8xl pixelated animate-float">
+                  {avatarEmojis.character}
+                </div>
+
+                {/* 악세서리 (하단) */}
+                {avatarEmojis.accessory && (
+                  <div className="absolute -bottom-2 -right-4 text-4xl">
+                    {avatarEmojis.accessory}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 장착 아이템 표시 */}
@@ -53,13 +130,14 @@ export function Avatar() {
                 if (!itemId) return null;
                 const item = DEFAULT_AVATAR_ITEMS.find((i) => i.id === itemId);
                 const category = categories.find((c) => c.id === cat);
+                const emoji = ITEM_EMOJIS[itemId] || category?.icon || '❓';
                 return (
                   <div
                     key={cat}
                     className="flex items-center justify-between p-3 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(90,90,154,0.2)]"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-lg">{category?.icon}</span>
+                      <span className="text-lg">{emoji}</span>
                       <span className="text-sm">{item?.name || itemId}</span>
                     </div>
                     <button
@@ -99,6 +177,7 @@ export function Avatar() {
             {categoryItems.map((item) => {
               const status = getUnlockStatus(item);
               const isEquipped = avatar.equipment[activeCategory] === item.id;
+              const itemEmoji = getItemEmoji(item.id, activeCategory);
 
               return (
                 <PixelBox
@@ -126,13 +205,9 @@ export function Avatar() {
                     }}
                   />
 
-                  {/* 아이템 프리뷰 */}
+                  {/* 아이템 프리뷰 - 이모지 표시 */}
                   <div className="aspect-square rounded-xl bg-[rgba(0,0,0,0.3)] mb-3 flex items-center justify-center text-4xl">
-                    {item.category === 'hair' && '💇'}
-                    {item.category === 'outfit' && '👕'}
-                    {item.category === 'accessory' && '🎀'}
-                    {item.category === 'background' && '🖼️'}
-                    {item.category === 'effect' && '✨'}
+                    {itemEmoji}
                   </div>
 
                   <p className="text-sm font-medium truncate">{item.name}</p>
