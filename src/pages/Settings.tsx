@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PixelBox } from '../components/common/PixelBox';
 import { useGameStore, useAvatarStore, useAchievementStore } from '../stores';
 import { useNotionConnection, useNotionDatabases, getDatabaseTitle } from '../hooks';

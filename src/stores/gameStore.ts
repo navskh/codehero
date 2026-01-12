@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import type {
   IGameState,
   IStats,
-  IStreak,
   XPSourceType,
   TaskDifficulty,
   TaskTag,
@@ -57,7 +56,7 @@ export const useGameStore = create<IGameStore>()(
     (set, get) => ({
       ...initialState,
 
-      addXP: (amount, source) => {
+      addXP: (amount, _source) => {
         const state = get();
         let newCurrentXP = state.currentXP + amount;
         let newTotalXP = state.totalXP + amount;

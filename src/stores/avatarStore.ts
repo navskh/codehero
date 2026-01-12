@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import type {
   IAvatar,
   IAvatarBase,
-  IAvatarEquipment,
   AvatarAnimation,
   ItemCategory,
 } from '../types';

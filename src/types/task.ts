@@ -1,6 +1,6 @@
 // 태스크 타입 정의 (Notion 연동용)
 
-import { TASK_DIFFICULTIES, TASK_TAGS, type TaskDifficulty, type TaskTag } from './common';
+import type { TaskDifficulty, TaskTag } from './common';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 

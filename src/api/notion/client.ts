@@ -2,12 +2,6 @@
 
 const API_BASE = '/api/notion';
 
-interface IApiResponse<T> {
-  success: boolean;
-  error?: string;
-  [key: string]: unknown;
-}
-
 async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {

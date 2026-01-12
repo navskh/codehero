@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAchievementStore } from '../../stores';
-import { ACHIEVEMENT_RARITY_COLORS } from '../../types';
 import { PixelBox } from '../common/PixelBox';
 
 export function AchievementPopup() {
@@ -22,8 +21,6 @@ export function AchievementPopup() {
   }, [recentUnlock, clearRecentUnlock]);
 
   if (!recentUnlock) return null;
-
-  const rarityColor = ACHIEVEMENT_RARITY_COLORS[recentUnlock.rarity];
 
   return (
     <div
