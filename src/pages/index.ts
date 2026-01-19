@@ -6,3 +6,4 @@ export { Avatar } from './Avatar';
 export { Skills } from './Skills';
 export { Achievements } from './Achievements';
 export { Settings } from './Settings';
+export { Login } from './Login';

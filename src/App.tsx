@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MainLayout } from './components/layout/MainLayout';
 import { AchievementPopup } from './components/gamification/AchievementPopup';
+import { useAuthStore } from './stores/authStore';
 import {
   Home,
   Tasks,
@@ -11,6 +12,7 @@ import {
   Skills,
   Achievements,
   Settings,
+  Login,
 } from './pages';
 import './styles/globals.css';
 
@@ -24,6 +26,17 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+
+  // 로그인 안됐으면 로그인 페이지 표시
+  if (!isLoggedIn) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Login />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
