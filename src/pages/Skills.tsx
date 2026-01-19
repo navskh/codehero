@@ -22,7 +22,7 @@ export function Skills() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-pixel text-2xl gradient-text mb-2">스킬트리</h1>
+          <h1 className="page-title gradient-text mb-2">스킬트리</h1>
           <p className="text-[#8888aa] text-sm">스킬 포인트를 사용하여 능력을 강화하세요</p>
         </div>
         <div className="flex items-center gap-3 glass-card px-5 py-3 rounded-xl">

@@ -30,7 +30,7 @@ export function Achievements() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-pixel text-2xl gradient-text-gold mb-2">업적</h1>
+          <h1 className="page-title gradient-text-gold mb-2">업적</h1>
           <p className="text-[#8888aa] text-sm">목표를 달성하고 보상을 획득하세요</p>
         </div>
         <div className="glass-card px-4 py-2 rounded-xl">

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNotionAll } from './useNotionAll';
 import type { INotionPage } from './useNotionAll';
-import { useContentStore } from '../stores/contentStore';
-import { analyzePageFull } from '../lib/contentAnalyzer';
+import { useContentStore, type IAnalysisCache } from '../stores/contentStore';
+import { analyzePageFull, extractTodosFromBlocks } from '../lib/contentAnalyzer';
 import type { FullPageAnalysis, SkillXP, NotionBlock } from '../lib/contentAnalyzer';
+import type { ITodoItem } from '../types/task';
 
 // API로 블록 가져오기
 async function fetchBlocks(pageId: string): Promise<NotionBlock[]> {
@@ -13,9 +14,18 @@ async function fetchBlocks(pageId: string): Promise<NotionBlock[]> {
   return data.blocks || [];
 }
 
+// 페이지 분석 결과 (화면 표시용 - id, url, lastEditedTime 포함)
+export interface PageAnalysisWithMeta extends FullPageAnalysis {
+  id: string;
+  url: string;
+  lastEditedTime: string;
+  status?: string | null;
+}
+
 // 분석 결과 인터페이스
 export interface AnalysisResult {
-  pages: FullPageAnalysis[];
+  pages: PageAnalysisWithMeta[];
+  todos: ITodoItem[];
   totalXP: number;
   skillXP: SkillXP;
   stats: {
@@ -34,27 +44,66 @@ export interface SyncState {
   error: string | null;
 }
 
-export function useContentAnalysis(options?: {
-  autoSync?: boolean;         // 자동 동기화 활성화
-  pollingInterval?: number;   // 폴링 간격 (ms), 기본 5분
-}) {
-  const { autoSync = true, pollingInterval = 5 * 60 * 1000 } = options || {};
+// 캐시에서 PageAnalysisWithMeta 변환
+function cacheToPageWithMeta(cached: IAnalysisCache): PageAnalysisWithMeta {
+  return {
+    id: cached.pageId,
+    url: cached.url || '',
+    lastEditedTime: cached.lastEditedTime,
+    title: cached.title,
+    workType: cached.workType,
+    baseXP: 0,
+    depth: cached.depth,
+    depthMultiplier: cached.depth === 'shallow' ? 0.5 : cached.depth === 'medium' ? 1 : 2,
+    depthScore: cached.depthScore,
+    finalXP: cached.finalXP,
+    skillBranch: cached.skillBranch,
+    skillXP: {
+      frontend: cached.skillBranch === 'frontend' ? cached.finalXP : 0,
+      backend: cached.skillBranch === 'backend' ? cached.finalXP : 0,
+      devops: cached.skillBranch === 'devops' ? cached.finalXP : 0,
+      softskills: cached.skillBranch === 'softskills' ? cached.finalXP : 0,
+      general: cached.skillBranch === 'general' ? cached.finalXP : 0,
+    },
+  };
+}
 
-  const { data: notionData, isLoading: isLoadingNotion, refetch: refetchNotion } = useNotionAll();
+export function useContentAnalysis() {
+  const { refetch: refetchNotion } = useNotionAll({ enabled: false });
   const store = useContentStore();
 
   const [syncState, setSyncState] = useState<SyncState>({
     isSyncing: false,
     progress: 0,
     total: 0,
-    lastSyncTime: null,
+    lastSyncTime: store.lastUpdated || null,
     error: null,
   });
 
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [todos, setTodos] = useState<ITodoItem[]>([]);
 
-  // 페이지 분석 함수
+  // 캐시에서 분석 결과 가져오기 (API 호출 없음)
+  const getCachedResult = useCallback((): AnalysisResult => {
+    const { cache, totalSkillXP } = store;
+    const entries = Object.values(cache);
+
+    const pages = entries.map(cacheToPageWithMeta);
+    const totalXP = entries.reduce((sum, e) => sum + e.finalXP, 0);
+
+    return {
+      pages,
+      todos: [], // 캐시에서는 할일 없음 (동기화 시에만 추출)
+      totalXP,
+      skillXP: totalSkillXP,
+      stats: {
+        totalPages: entries.length,
+        cached: entries.length,
+        analyzed: 0,
+      },
+    };
+  }, [store]);
+
+  // 페이지 분석 함수 (동기화 버튼 누를 때만 호출)
   const analyzePages = useCallback(async (pages: INotionPage[]) => {
     setSyncState(prev => ({
       ...prev,
@@ -64,7 +113,8 @@ export function useContentAnalysis(options?: {
       error: null,
     }));
 
-    const results: FullPageAnalysis[] = [];
+    const results: PageAnalysisWithMeta[] = [];
+    const allTodos: ITodoItem[] = [];
     let cached = 0;
     let analyzed = 0;
 
@@ -80,36 +130,37 @@ export function useContentAnalysis(options?: {
       const page = pages[i];
 
       try {
-        // 캐시 확인
+        // 블록 가져오기 (할일 추출을 위해)
+        const blocks = await fetchBlocks(page.id);
+
+        // 할일 추출
+        const pageTodos = extractTodosFromBlocks(blocks, page.id, page.title, page.url);
+        allTodos.push(...pageTodos);
+
+        // 캐시 확인 (XP 분석용)
         const cachedResult = store.getCachedAnalysis(page.id, page.lastEditedTime);
 
         if (cachedResult) {
           cached++;
-          const analysis: FullPageAnalysis = {
-            title: cachedResult.title,
-            workType: cachedResult.workType,
-            baseXP: 0,
-            depth: cachedResult.depth,
-            depthMultiplier: cachedResult.depth === 'shallow' ? 0.5 : cachedResult.depth === 'medium' ? 1 : 2,
-            depthScore: cachedResult.depthScore,
-            finalXP: cachedResult.finalXP,
-            skillBranch: cachedResult.skillBranch,
-            skillXP: {
-              frontend: cachedResult.skillBranch === 'frontend' ? cachedResult.finalXP : 0,
-              backend: cachedResult.skillBranch === 'backend' ? cachedResult.finalXP : 0,
-              devops: cachedResult.skillBranch === 'devops' ? cachedResult.finalXP : 0,
-              softskills: cachedResult.skillBranch === 'softskills' ? cachedResult.finalXP : 0,
-              general: cachedResult.skillBranch === 'general' ? cachedResult.finalXP : 0,
-            },
-          };
-          results.push(analysis);
+          const pageWithMeta = cacheToPageWithMeta(cachedResult);
+          // 최신 URL 업데이트
+          pageWithMeta.url = page.url;
+          pageWithMeta.status = page.status;
+          results.push(pageWithMeta);
           totals[cachedResult.skillBranch] += cachedResult.finalXP;
         } else {
           analyzed++;
-          const blocks = await fetchBlocks(page.id);
           const analysis = analyzePageFull(page.title, blocks);
-          store.saveAnalysis(page.id, page.lastEditedTime, analysis);
-          results.push(analysis);
+          store.saveAnalysis(page.id, page.url, page.lastEditedTime, analysis);
+
+          const pageWithMeta: PageAnalysisWithMeta = {
+            ...analysis,
+            id: page.id,
+            url: page.url,
+            lastEditedTime: page.lastEditedTime,
+            status: page.status,
+          };
+          results.push(pageWithMeta);
           totals[analysis.skillBranch] += analysis.finalXP;
         }
       } catch (err) {
@@ -119,11 +170,19 @@ export function useContentAnalysis(options?: {
       setSyncState(prev => ({ ...prev, progress: i + 1 }));
     }
 
-    const totalXP = results.reduce((sum, r) => sum + r.finalXP, 0);
+    // 할일 상태 업데이트
+    setTodos(allTodos);
 
-    const result: AnalysisResult = {
+    setSyncState(prev => ({
+      ...prev,
+      isSyncing: false,
+      lastSyncTime: new Date().toISOString(),
+    }));
+
+    return {
       pages: results,
-      totalXP,
+      todos: allTodos,
+      totalXP: results.reduce((sum, r) => sum + r.finalXP, 0),
       skillXP: totals,
       stats: {
         totalPages: pages.length,
@@ -131,62 +190,51 @@ export function useContentAnalysis(options?: {
         analyzed,
       },
     };
-
-    setAnalysisResult(result);
-    setSyncState(prev => ({
-      ...prev,
-      isSyncing: false,
-      lastSyncTime: new Date().toISOString(),
-    }));
-
-    return result;
   }, [store]);
 
-  // 수동 동기화
+  // 수동 동기화 (버튼 클릭 시에만 호출)
   const sync = useCallback(async () => {
-    // 먼저 Notion 데이터 새로고침
-    const { data } = await refetchNotion();
-    if (data?.pages) {
-      await analyzePages(data.pages);
+    setSyncState(prev => ({ ...prev, isSyncing: true, error: null }));
+
+    try {
+      // Notion API 호출
+      const { data } = await refetchNotion();
+      if (data?.pages) {
+        await analyzePages(data.pages);
+      } else {
+        setSyncState(prev => ({
+          ...prev,
+          isSyncing: false,
+          error: 'Notion 데이터를 가져올 수 없습니다.',
+        }));
+      }
+    } catch (err) {
+      console.error('Sync failed:', err);
+      setSyncState(prev => ({
+        ...prev,
+        isSyncing: false,
+        error: '동기화 중 오류가 발생했습니다.',
+      }));
     }
   }, [refetchNotion, analyzePages]);
-
-  // 초기 로드 시 분석
-  useEffect(() => {
-    if (notionData?.pages && !analysisResult && !syncState.isSyncing) {
-      analyzePages(notionData.pages);
-    }
-  }, [notionData, analysisResult, syncState.isSyncing, analyzePages]);
-
-  // 자동 폴링
-  useEffect(() => {
-    if (!autoSync) return;
-
-    pollingRef.current = setInterval(() => {
-      console.log('[ContentAnalysis] Auto-sync triggered');
-      sync();
-    }, pollingInterval);
-
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
-  }, [autoSync, pollingInterval, sync]);
 
   // 캐시 클리어
   const clearCache = useCallback(() => {
     store.clearCache();
-    setAnalysisResult(null);
+    setTodos([]);
   }, [store]);
 
+  // 캐시된 결과
+  const cachedResult = getCachedResult();
+
   return {
-    // 데이터
-    result: analysisResult,
-    pages: notionData?.pages || [],
+    // 데이터 (캐시 기반)
+    result: cachedResult,
+    pages: cachedResult.pages,
+    todos,
 
     // 상태
-    isLoading: isLoadingNotion || syncState.isSyncing,
+    isLoading: syncState.isSyncing,
     syncState,
 
     // 액션

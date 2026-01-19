@@ -1,3 +1,5 @@
+import type { ITodoItem, TodoBlockType } from '../types/task';
+
 // 작업 유형 정의
 export type WorkType =
   | 'coding'
@@ -294,4 +296,162 @@ export function analyzePageFull(title: string, blocks: NotionBlock[]): FullPageA
     skillBranch,
     skillXP,
   };
+}
+
+// ============================================
+// 블록에서 할일 추출
+// ============================================
+
+// 할일 키워드 패턴
+const TODO_TEXT_PATTERNS = [
+  /^할\s?일\s*[:：]?\s*/i,
+  /^TODO\s*[:：]?\s*/i,
+  /^해야\s?할\s*[:：]?\s*/i,
+  /^작업\s*[:：]?\s*/i,
+  /^\[\s*\]\s*/,  // [ ] 체크박스 패턴
+  /^[-*]\s*\[\s*\]\s*/,  // - [ ] 또는 * [ ] 패턴
+];
+
+// 완료 키워드 패턴
+const COMPLETED_PATTERNS = [
+  /^완료\s*[:：]?\s*/i,
+  /^Done\s*[:：]?\s*/i,
+  /^\[x\]/i,
+  /^\[X\]/i,
+  /^[-*]\s*\[x\]/i,
+  /^[-*]\s*\[X\]/i,
+];
+
+// 블록에서 텍스트와 완료 상태 추출
+function extractTodoFromBlock(block: NotionBlock): { text: string; isCompleted: boolean; type: TodoBlockType } | null {
+  // to_do 블록 처리 (Notion 체크박스)
+  if (block.type === 'to_do') {
+    const todoContent = block.to_do as {
+      rich_text?: Array<{ plain_text: string; annotations?: { strikethrough?: boolean } }>;
+      checked?: boolean;
+    } | undefined;
+
+    if (todoContent?.rich_text) {
+      const text = todoContent.rich_text.map(t => t.plain_text).join('');
+      const hasStrikethrough = todoContent.rich_text.some(t => t.annotations?.strikethrough);
+      const isCompleted = todoContent.checked === true || hasStrikethrough;
+
+      if (text.trim()) {
+        return { text: text.trim(), isCompleted, type: 'todo' };
+      }
+    }
+    return null;
+  }
+
+  // paragraph 블록에서 할일 패턴 찾기
+  if (block.type === 'paragraph') {
+    const content = block.paragraph as {
+      rich_text?: Array<{ plain_text: string; annotations?: { strikethrough?: boolean } }>;
+    } | undefined;
+
+    if (content?.rich_text) {
+      const text = content.rich_text.map(t => t.plain_text).join('');
+      const hasStrikethrough = content.rich_text.some(t => t.annotations?.strikethrough);
+
+      // 완료 패턴 체크
+      for (const pattern of COMPLETED_PATTERNS) {
+        if (pattern.test(text)) {
+          const cleanText = text.replace(pattern, '').trim();
+          if (cleanText) {
+            return { text: cleanText, isCompleted: true, type: 'text' };
+          }
+        }
+      }
+
+      // 할일 패턴 체크
+      for (const pattern of TODO_TEXT_PATTERNS) {
+        if (pattern.test(text)) {
+          const cleanText = text.replace(pattern, '').trim();
+          if (cleanText) {
+            return { text: cleanText, isCompleted: hasStrikethrough, type: 'text' };
+          }
+        }
+      }
+    }
+  }
+
+  // bulleted_list_item에서 할일 추출 (- 로 시작하는 모든 항목)
+  if (block.type === 'bulleted_list_item') {
+    const content = block.bulleted_list_item as {
+      rich_text?: Array<{ plain_text: string; annotations?: { strikethrough?: boolean } }>;
+    } | undefined;
+
+    if (content?.rich_text) {
+      const text = content.rich_text.map(t => t.plain_text).join('');
+      const hasStrikethrough = content.rich_text.some(t => t.annotations?.strikethrough);
+
+      // [ ] 또는 [x] 패턴 체크
+      if (/^\[\s*[xX]?\s*\]/.test(text)) {
+        const isCompleted = /^\[\s*[xX]\s*\]/.test(text) || hasStrikethrough;
+        const cleanText = text.replace(/^\[\s*[xX]?\s*\]\s*/, '').trim();
+        if (cleanText) {
+          return { text: cleanText, isCompleted, type: 'bullet' };
+        }
+      }
+
+      // 완료 패턴 체크
+      for (const pattern of COMPLETED_PATTERNS) {
+        if (pattern.test(text)) {
+          const cleanText = text.replace(pattern, '').trim();
+          if (cleanText) {
+            return { text: cleanText, isCompleted: true, type: 'bullet' };
+          }
+        }
+      }
+
+      // 할일 키워드 체크
+      for (const pattern of TODO_TEXT_PATTERNS) {
+        if (pattern.test(text)) {
+          const cleanText = text.replace(pattern, '').trim();
+          if (cleanText) {
+            return { text: cleanText, isCompleted: hasStrikethrough, type: 'bullet' };
+          }
+        }
+      }
+
+      // 그 외 모든 bulleted_list_item은 할일로 처리
+      if (text.trim()) {
+        return { text: text.trim(), isCompleted: hasStrikethrough, type: 'bullet' };
+      }
+    }
+  }
+
+  return null;
+}
+
+// 블록 ID 추출 (타입 안전)
+function getBlockId(block: NotionBlock): string {
+  return (block as { id?: string }).id || `block-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// 페이지의 블록들에서 할일 목록 추출
+export function extractTodosFromBlocks(
+  blocks: NotionBlock[],
+  pageId: string,
+  pageTitle: string,
+  pageUrl: string
+): ITodoItem[] {
+  const todos: ITodoItem[] = [];
+
+  for (const block of blocks) {
+    const todoInfo = extractTodoFromBlock(block);
+    if (todoInfo) {
+      todos.push({
+        id: getBlockId(block),
+        pageId,
+        pageTitle,
+        pageUrl,
+        text: todoInfo.text,
+        isCompleted: todoInfo.isCompleted,
+        type: todoInfo.type,
+      });
+    }
+  }
+
+  return todos;
 }

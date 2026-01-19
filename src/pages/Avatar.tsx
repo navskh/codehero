@@ -1,256 +1,709 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { PixelBox } from '../components/common/PixelBox';
-import { useAvatarStore, useGameStore } from '../stores';
-import type { ItemCategory } from '../types';
-import { DEFAULT_AVATAR_ITEMS, RARITY_COLORS } from '../types';
+import {
+	LayeredAvatar,
+	ColorButton,
+	PartCard,
+	CategoryTabs,
+} from '../components/avatar';
+import { useLayeredAvatarStore } from '../stores';
+import {
+	SKIN_TONES,
+	HAIR_COLORS,
+	EYE_COLORS,
+	ALL_PARTS,
+	type SkinTone,
+	type HairColor,
+	type EyeColor,
+	type IAvatarColors,
+} from '../data/avatar/parts';
+import {
+	DEFAULT_PRESETS,
+	SKIN_TONE_NAMES,
+	HAIR_COLOR_NAMES,
+	EYE_COLOR_NAMES,
+	OUTFIT_COLOR_NAMES,
+	type IAvatarPreset,
+} from '../data/avatar/presets';
 
-const categories: { id: ItemCategory; label: string; icon: string }[] = [
-  { id: 'hair', label: '헤어', icon: '💇' },
-  { id: 'outfit', label: '의상', icon: '👕' },
-  { id: 'accessory', label: '악세서리', icon: '🎀' },
-  { id: 'background', label: '배경', icon: '🖼️' },
-  { id: 'effect', label: '이펙트', icon: '✨' },
+// 커스터마이징 카테고리
+const CUSTOMIZE_CATEGORIES = [
+	{ id: 'face', label: '얼굴', icon: '😊' },
+	{ id: 'hair', label: '헤어', icon: '💇' },
+	{ id: 'expression', label: '표정', icon: '✨' },
+	{ id: 'outfit', label: '의상', icon: '👕' },
+	{ id: 'accessory', label: '악세서리', icon: '👓' },
+	{ id: 'background', label: '배경', icon: '🎨' },
+] as const;
+
+type CustomizeCategory = (typeof CUSTOMIZE_CATEGORIES)[number]['id'];
+
+// 의상 색상 옵션 - 모던 팔레트
+const OUTFIT_COLORS = [
+	'#1C1C27', // 미드나잇
+	'#2D3748', // 슬레이트
+	'#4A5568', // 쿨그레이
+	'#5B7C99', // 스틸블루
+	'#3182CE', // 로얄블루
+	'#319795', // 틸
+	'#38A169', // 에메랄드
+	'#805AD5', // 바이올렛
+	'#B83280', // 마젠타
+	'#C53030', // 크림슨
+	'#DD6B20', // 탠저린
+	'#D69E2E', // 골든
+	'#718096', // 뉴트럴
+	'#F7FAFC', // 화이트
 ];
 
-// 아이템 ID별 이모지 매핑
-const ITEM_EMOJIS: Record<string, string> = {
-  // 헤어
-  hair_short_black: '👨',
-  hair_messy: '🧑‍💻',
-  hair_long: '👩',
-  // 의상
-  outfit_casual: '👕',
-  outfit_hoodie: '🧥',
-  outfit_suit: '🤵',
-  // 악세서리
-  acc_glasses: '👓',
-  acc_headphones: '🎧',
-  acc_coffee: '☕',
-  // 배경
-  bg_office: '🏢',
-  bg_home: '🏠',
-  bg_server: '🖥️',
-  // 이펙트
-  effect_sparkle: '✨',
-  effect_flame: '🔥',
-  effect_rainbow: '🌈',
-};
-
-// 카테고리별 기본 이모지
-const DEFAULT_CATEGORY_EMOJIS: Record<ItemCategory, string> = {
-  hair: '👨',
-  outfit: '👕',
-  accessory: '',
-  background: '',
-  effect: '',
-};
+// 스마트 랜덤 타입
+type RandomMode = 'full' | 'harmonious' | 'keepSkin' | 'keepOutfit';
 
 export function Avatar() {
-  const [activeCategory, setActiveCategory] = useState<ItemCategory>('hair');
-  const { avatar, equipItem, unequipItem, isItemUnlocked } = useAvatarStore();
-  const { level } = useGameStore();
+	const [activeCategory, setActiveCategory] =
+		useState<CustomizeCategory>('face');
+	const [showPresets, setShowPresets] = useState(false);
+	const [randomMode, setRandomMode] = useState<RandomMode>('full');
 
-  const categoryItems = DEFAULT_AVATAR_ITEMS.filter(
-    (item) => item.category === activeCategory
-  );
+	// 스토어에서 아바타 설정 가져오기 (로컬스토리지에 자동 저장됨)
+	const {
+		config: avatarConfig,
+		canUndo,
+		canRedo,
+		setSkinTone,
+		setHairColor,
+		setEyeColor,
+		setOutfitColor,
+		setPart,
+		setConfig,
+		undo,
+		redo,
+		applyPreset,
+	} = useLayeredAvatarStore();
 
-  const getUnlockStatus = (item: typeof DEFAULT_AVATAR_ITEMS[0]) => {
-    if (isItemUnlocked(item.id)) return 'unlocked';
-    if (item.unlockCondition.type === 'level' && level >= (item.unlockCondition.value as number)) {
-      return 'available';
-    }
-    return 'locked';
-  };
+	// 색상 정보
+	const colors: IAvatarColors = {
+		skin: SKIN_TONES[avatarConfig.skinTone],
+		hair: HAIR_COLORS[avatarConfig.hairColor],
+		eyes: EYE_COLORS[avatarConfig.eyeColor],
+		outfit: avatarConfig.outfitColor,
+	};
 
-  // 장착 아이템에 따른 이모지 조합 계산
-  const avatarEmojis = useMemo(() => {
-    const { hair, outfit, accessory, background, effect } = avatar.equipment;
-    return {
-      background: background ? ITEM_EMOJIS[background] || '' : '',
-      character: outfit ? ITEM_EMOJIS[outfit] || '👨‍💻' : hair ? ITEM_EMOJIS[hair] || '👨‍💻' : '👨‍💻',
-      accessory: accessory ? ITEM_EMOJIS[accessory] || '' : '',
-      effect: effect ? ITEM_EMOJIS[effect] || '' : '',
-    };
-  }, [avatar.equipment]);
+	// 파츠 변경 핸들러
+	const handlePartChange = (layer: string, partId: string | null) => {
+		setPart(layer, partId);
+	};
 
-  // 아이템별 이모지 가져오기
-  const getItemEmoji = (itemId: string, category: ItemCategory) => {
-    return ITEM_EMOJIS[itemId] || DEFAULT_CATEGORY_EMOJIS[category] || '❓';
-  };
+	// 피부톤 변경
+	const handleSkinChange = (tone: SkinTone) => {
+		setSkinTone(tone);
+	};
 
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="font-pixel text-2xl gradient-text mb-2">아바타</h1>
-        <p className="text-[#8888aa] text-sm">캐릭터를 꾸미고 개성을 표현하세요</p>
-      </div>
+	// 헤어 색상 변경
+	const handleHairColorChange = (color: HairColor) => {
+		setHairColor(color);
+	};
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* 아바타 프리뷰 */}
-        <div className="col-span-12 md:col-span-5">
-          <PixelBox variant="gradient" className="p-6">
-            {/* 이모지 조합 프리뷰 */}
-            <div className="aspect-square rounded-2xl bg-gradient-to-br from-[rgba(0,212,255,0.1)] to-[rgba(168,85,247,0.1)] border border-[rgba(90,90,154,0.3)] flex items-center justify-center mb-5 relative overflow-hidden">
-              {/* 배경 레이어 */}
-              {avatarEmojis.background && (
-                <div className="absolute inset-0 flex items-center justify-center text-[120px] opacity-30">
-                  {avatarEmojis.background}
-                </div>
-              )}
+	// 눈 색상 변경
+	const handleEyeColorChange = (color: EyeColor) => {
+		setEyeColor(color);
+	};
 
-              {/* 캐릭터 + 이펙트 조합 */}
-              <div className="relative z-10 flex flex-col items-center">
-                {/* 이펙트 (상단) */}
-                {avatarEmojis.effect && (
-                  <div className="absolute -top-4 text-4xl animate-pulse">
-                    {avatarEmojis.effect}
-                  </div>
-                )}
+	// 의상 색상 변경
+	const handleOutfitColorChange = (color: string) => {
+		setOutfitColor(color);
+	};
 
-                {/* 메인 캐릭터 */}
-                <div className="text-8xl pixelated animate-float">
-                  {avatarEmojis.character}
-                </div>
+	// 랜덤 아바타 생성 (스마트 랜덤)
+	const randomizeAvatar = useCallback(() => {
+		const randomPick = <T,>(arr: readonly T[]): T =>
+			arr[Math.floor(Math.random() * arr.length)];
 
-                {/* 악세서리 (하단) */}
-                {avatarEmojis.accessory && (
-                  <div className="absolute -bottom-2 -right-4 text-4xl">
-                    {avatarEmojis.accessory}
-                  </div>
-                )}
-              </div>
-            </div>
+		// 조화로운 색상 조합 (피부톤과 헤어 색상 매칭)
+		const harmonicHairColors: Record<SkinTone, HairColor[]> = {
+			fair: ['black', 'darkBrown', 'brown', 'blonde', 'platinum', 'pink'],
+			light: ['black', 'darkBrown', 'brown', 'auburn', 'blonde', 'blue'],
+			medium: ['black', 'darkBrown', 'brown', 'auburn', 'purple'],
+			tan: ['black', 'darkBrown', 'brown', 'auburn'],
+			brown: ['black', 'darkBrown', 'brown'],
+			dark: ['black', 'darkBrown', 'gray'],
+		};
 
-            {/* 장착 아이템 표시 */}
-            <div className="space-y-2">
-              <p className="text-xs text-[#8888aa] mb-3 flex items-center gap-2">
-                <span className="text-[#00d4ff]">♦</span> 장착 중인 아이템
-              </p>
-              {Object.entries(avatar.equipment).map(([cat, itemId]) => {
-                if (!itemId) return null;
-                const item = DEFAULT_AVATAR_ITEMS.find((i) => i.id === itemId);
-                const category = categories.find((c) => c.id === cat);
-                const emoji = ITEM_EMOJIS[itemId] || category?.icon || '❓';
-                return (
-                  <div
-                    key={cat}
-                    className="flex items-center justify-between p-3 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[rgba(90,90,154,0.2)]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{emoji}</span>
-                      <span className="text-sm">{item?.name || itemId}</span>
-                    </div>
-                    <button
-                      onClick={() => unequipItem(cat as ItemCategory)}
-                      className="w-7 h-7 rounded-lg bg-[rgba(255,107,107,0.2)] text-[#ff6b6b] hover:bg-[rgba(255,107,107,0.3)] transition-all flex items-center justify-center"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
-              {Object.values(avatar.equipment).every((v) => !v) && (
-                <p className="text-center text-[#666688] py-4 text-sm">아직 장착한 아이템이 없습니다</p>
-              )}
-            </div>
-          </PixelBox>
-        </div>
+		let newSkinTone =
+			randomMode === 'keepSkin'
+				? avatarConfig.skinTone
+				: randomPick(Object.keys(SKIN_TONES) as SkinTone[]);
 
-        {/* 아이템 선택 */}
-        <div className="col-span-12 md:col-span-7">
-          {/* 카테고리 탭 */}
-          <div className="flex gap-2 mb-5 overflow-x-auto pb-2">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`category-tab ${activeCategory === cat.id ? 'category-tab-active' : ''}`}
-              >
-                <span>{cat.icon}</span>
-                <span className="text-sm">{cat.label}</span>
-              </button>
-            ))}
-          </div>
+		let newHairColor: HairColor;
+		if (randomMode === 'harmonious') {
+			newHairColor = randomPick(harmonicHairColors[newSkinTone]);
+		} else {
+			newHairColor = randomPick(Object.keys(HAIR_COLORS) as HairColor[]);
+		}
 
-          {/* 아이템 그리드 */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {categoryItems.map((item) => {
-              const status = getUnlockStatus(item);
-              const isEquipped = avatar.equipment[activeCategory] === item.id;
-              const itemEmoji = getItemEmoji(item.id, activeCategory);
+		const newOutfitColor =
+			randomMode === 'keepOutfit'
+				? avatarConfig.outfitColor
+				: randomPick(OUTFIT_COLORS);
 
-              return (
-                <PixelBox
-                  key={item.id}
-                  className={`p-4 relative ${
-                    status === 'locked' ? 'opacity-50 grayscale' : ''
-                  } ${isEquipped ? 'ring-2 ring-[#00d4ff] shadow-[0_0_20px_rgba(0,212,255,0.3)]' : ''}`}
-                  hover={status !== 'locked'}
-                  onClick={() => {
-                    if (status === 'unlocked') {
-                      if (isEquipped) {
-                        unequipItem(activeCategory);
-                      } else {
-                        equipItem(activeCategory, item.id);
-                      }
-                    }
-                  }}
-                >
-                  {/* 희귀도 표시 */}
-                  <div
-                    className="absolute top-3 right-3 w-3 h-3 rounded-full"
-                    style={{
-                      backgroundColor: RARITY_COLORS[item.rarity],
-                      boxShadow: `0 0 10px ${RARITY_COLORS[item.rarity]}`,
-                    }}
-                  />
+		setConfig({
+			skinTone: newSkinTone,
+			hairColor: newHairColor,
+			eyeColor: randomPick(Object.keys(EYE_COLORS) as EyeColor[]),
+			outfitColor: newOutfitColor,
+			parts: {
+				head: 'head_default',
+				ears: 'ears_default',
+				face_shadow: 'face_shadow_default',
+				body: 'body_default',
+				eyes: randomPick(ALL_PARTS.eyes).id,
+				eyebrows: randomPick(ALL_PARTS.eyebrows).id,
+				nose: randomPick(ALL_PARTS.nose).id,
+				mouth: randomPick(ALL_PARTS.mouth).id,
+				blush: randomPick(ALL_PARTS.blush).id,
+				hair_front: randomPick(ALL_PARTS.hair_front).id,
+				hair_back: randomPick(ALL_PARTS.hair_back).id,
+				outfit_back: 'outfit_back_none',
+				outfit_front: randomPick(ALL_PARTS.outfit_front).id,
+				accessory: randomPick(ALL_PARTS.accessory).id,
+				background: randomPick(ALL_PARTS.background).id,
+				effect: randomPick(ALL_PARTS.effect).id,
+			},
+		});
+	}, [avatarConfig.skinTone, avatarConfig.outfitColor, randomMode, setConfig]);
 
-                  {/* 아이템 프리뷰 - 이모지 표시 */}
-                  <div className="aspect-square rounded-xl bg-[rgba(0,0,0,0.3)] mb-3 flex items-center justify-center text-4xl">
-                    {itemEmoji}
-                  </div>
+	// 프리셋 적용
+	const handlePresetApply = (preset: IAvatarPreset) => {
+		applyPreset(preset.config);
+		setShowPresets(false);
+	};
 
-                  <p className="text-sm font-medium truncate">{item.name}</p>
-                  <p className="text-xs text-[#8888aa] truncate mt-1">{item.description}</p>
+	// 섹션 헤더 컴포넌트
+	const SectionHeader = ({ title }: { title: string }) => (
+		<div className="section-header">
+			<div className="section-header-dot" />
+			<h3 className="section-header-title">{title}</h3>
+		</div>
+	);
 
-                  {/* 잠금 표시 */}
-                  {status === 'locked' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.7)] rounded-xl">
-                      <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-[rgba(255,255,255,0.1)] flex items-center justify-center">
-                          <span className="text-2xl">🔒</span>
-                        </div>
-                        <p className="text-xs text-[#8888aa]">
-                          {item.unlockCondition.type === 'level' &&
-                            `Lv.${item.unlockCondition.value} 필요`}
-                          {item.unlockCondition.type === 'achievement' && '업적 필요'}
-                          {item.unlockCondition.type === 'skill' && '스킬 필요'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+	// 카테고리별 렌더링
+	const renderCategoryContent = () => {
+		switch (activeCategory) {
+			case 'face':
+				return (
+					<div className="space-y-6">
+						{/* 피부톤 */}
+						<div>
+							<SectionHeader title="피부톤" />
+							<div className="flex flex-wrap gap-3">
+								{Object.entries(SKIN_TONES).map(([key, color]) => (
+									<ColorButton
+										key={key}
+										color={color}
+										colorName={SKIN_TONE_NAMES[key]}
+										selected={avatarConfig.skinTone === key}
+										onClick={() => handleSkinChange(key as SkinTone)}
+										size={48}
+									/>
+								))}
+							</div>
+						</div>
 
-                  {/* 장착 표시 */}
-                  {isEquipped && (
-                    <div className="absolute top-3 left-3">
-                      <span className="badge badge-primary">장착</span>
-                    </div>
-                  )}
-                </PixelBox>
-              );
-            })}
-          </div>
+						{/* 눈 색상 */}
+						<div>
+							<SectionHeader title="눈동자 색상" />
+							<div className="flex flex-wrap gap-3">
+								{Object.entries(EYE_COLORS).map(([key, color]) => (
+									<ColorButton
+										key={key}
+										color={color}
+										colorName={EYE_COLOR_NAMES[key]}
+										selected={avatarConfig.eyeColor === key}
+										onClick={() => handleEyeColorChange(key as EyeColor)}
+										size={48}
+									/>
+								))}
+							</div>
+						</div>
 
-          {categoryItems.length === 0 && (
-            <PixelBox className="p-10 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[rgba(168,85,247,0.1)] flex items-center justify-center">
-                <span className="text-3xl">📦</span>
-              </div>
-              <p className="text-[#8888aa]">이 카테고리에 아이템이 없습니다</p>
-            </PixelBox>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+						{/* 눈 스타일 */}
+						<div>
+							<SectionHeader title="눈 모양" />
+							<div className="parts-grid">
+								{ALL_PARTS.eyes.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="eyes"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.eyes === part.id}
+										onClick={() => handlePartChange('eyes', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 눈썹 */}
+						<div>
+							<SectionHeader title="눈썹" />
+							<div className="parts-grid">
+								{ALL_PARTS.eyebrows.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="eyebrows"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.eyebrows === part.id}
+										onClick={() => handlePartChange('eyebrows', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 코 */}
+						<div>
+							<SectionHeader title="코" />
+							<div className="parts-grid">
+								{ALL_PARTS.nose.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="nose"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.nose === part.id}
+										onClick={() => handlePartChange('nose', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			case 'hair':
+				return (
+					<div className="space-y-6">
+						{/* 헤어 색상 */}
+						<div>
+							<SectionHeader title="헤어 색상" />
+							<div className="flex flex-wrap gap-3">
+								{Object.entries(HAIR_COLORS).map(([key, color]) => (
+									<ColorButton
+										key={key}
+										color={color}
+										colorName={HAIR_COLOR_NAMES[key]}
+										selected={avatarConfig.hairColor === key}
+										onClick={() => handleHairColorChange(key as HairColor)}
+										size={48}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 앞머리 스타일 */}
+						<div>
+							<SectionHeader title="앞머리" />
+							<div className="parts-grid">
+								{ALL_PARTS.hair_front.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="hair_front"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.hair_front === part.id}
+										onClick={() => handlePartChange('hair_front', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 뒷머리 스타일 */}
+						<div>
+							<SectionHeader title="뒷머리" />
+							<div className="parts-grid">
+								{ALL_PARTS.hair_back.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="hair_back"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.hair_back === part.id}
+										onClick={() => handlePartChange('hair_back', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			case 'expression':
+				return (
+					<div className="space-y-6">
+						{/* 입 */}
+						<div>
+							<SectionHeader title="입" />
+							<div className="parts-grid">
+								{ALL_PARTS.mouth.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="mouth"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.mouth === part.id}
+										onClick={() => handlePartChange('mouth', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 볼터치 */}
+						<div>
+							<SectionHeader title="볼터치" />
+							<div className="parts-grid">
+								{ALL_PARTS.blush.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="blush"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.blush === part.id}
+										onClick={() => handlePartChange('blush', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 이펙트 */}
+						<div>
+							<SectionHeader title="이펙트" />
+							<div className="parts-grid">
+								{ALL_PARTS.effect.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="effect"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.effect === part.id}
+										onClick={() => handlePartChange('effect', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			case 'outfit':
+				return (
+					<div className="space-y-6">
+						{/* 의상 색상 */}
+						<div>
+							<SectionHeader title="의상 색상" />
+							<div className="flex flex-wrap gap-3">
+								{OUTFIT_COLORS.map((color) => (
+									<ColorButton
+										key={color}
+										color={color}
+										colorName={OUTFIT_COLOR_NAMES[color]}
+										selected={avatarConfig.outfitColor === color}
+										onClick={() => handleOutfitColorChange(color)}
+										size={48}
+									/>
+								))}
+							</div>
+						</div>
+
+						{/* 의상 스타일 */}
+						<div>
+							<SectionHeader title="의상 스타일" />
+							<div className="parts-grid">
+								{ALL_PARTS.outfit_front.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="outfit_front"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.outfit_front === part.id}
+										onClick={() => handlePartChange('outfit_front', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			case 'accessory':
+				return (
+					<div className="space-y-6">
+						<div>
+							<SectionHeader title="악세서리" />
+							<div className="parts-grid">
+								{ALL_PARTS.accessory.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="accessory"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.accessory === part.id}
+										onClick={() => handlePartChange('accessory', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			case 'background':
+				return (
+					<div className="space-y-6">
+						<div>
+							<SectionHeader title="배경" />
+							<div className="parts-grid">
+								{ALL_PARTS.background.map((part) => (
+									<PartCard
+										key={part.id}
+										layer="background"
+										partId={part.id}
+										partName={part.name}
+										colors={colors}
+										selected={avatarConfig.parts.background === part.id}
+										onClick={() => handlePartChange('background', part.id)}
+									/>
+								))}
+							</div>
+						</div>
+					</div>
+				);
+
+			default:
+				return null;
+		}
+	};
+
+	return (
+		<div className="max-w-5xl mx-auto pb-20 md:pb-0">
+			<div className="mb-6">
+				<h1 className="page-title gradient-text mb-2">
+					아바타 커스터마이징
+				</h1>
+				<p className="text-[#8888aa] text-sm">
+					나만의 개성있는 캐릭터를 만들어보세요
+				</p>
+			</div>
+
+			<div className="grid grid-cols-12 gap-6">
+				{/* 아바타 프리뷰 */}
+				<div className="col-span-12 md:col-span-4">
+					<PixelBox variant="gradient" className="p-6 sticky top-6">
+						{/* 메인 아바타 */}
+						<div className="avatar-preview-container aspect-square flex items-center justify-center mb-5 border border-[rgba(90,90,154,0.2)]">
+							<div className="avatar-inner">
+								<LayeredAvatar config={avatarConfig} size={220} animated />
+							</div>
+						</div>
+
+						{/* 히스토리 버튼 */}
+						<div className="flex items-center justify-center gap-2 mb-4">
+							<button
+								onClick={undo}
+								disabled={!canUndo}
+								className="history-btn"
+								title="실행 취소 (Undo)"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<path d="M3 7v6h6" />
+									<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+								</svg>
+							</button>
+							<button
+								onClick={redo}
+								disabled={!canRedo}
+								className="history-btn"
+								title="다시 실행 (Redo)"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="18"
+									height="18"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<path d="M21 7v6h-6" />
+									<path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+								</svg>
+							</button>
+						</div>
+
+						{/* 액션 버튼 */}
+						<div className="space-y-3">
+							{/* 랜덤 생성 버튼 */}
+							<button onClick={randomizeAvatar} className="action-btn w-full">
+								<span className="dice-icon">🎲</span>
+								<span>랜덤 생성</span>
+							</button>
+
+							{/* 스마트 랜덤 옵션 */}
+							<div className="flex flex-wrap gap-1 text-xs">
+								<button
+									onClick={() => setRandomMode('full')}
+									className={`random-option flex-1 ${randomMode === 'full' ? 'random-option-selected' : ''}`}
+								>
+									전체
+								</button>
+								<button
+									onClick={() => setRandomMode('harmonious')}
+									className={`random-option flex-1 ${randomMode === 'harmonious' ? 'random-option-selected' : ''}`}
+								>
+									조화
+								</button>
+								<button
+									onClick={() => setRandomMode('keepSkin')}
+									className={`random-option flex-1 ${randomMode === 'keepSkin' ? 'random-option-selected' : ''}`}
+								>
+									피부 유지
+								</button>
+								<button
+									onClick={() => setRandomMode('keepOutfit')}
+									className={`random-option flex-1 ${randomMode === 'keepOutfit' ? 'random-option-selected' : ''}`}
+								>
+									의상 유지
+								</button>
+							</div>
+
+							{/* 프리셋 버튼 */}
+							<button
+								onClick={() => setShowPresets(!showPresets)}
+								className="action-btn w-full"
+							>
+								<span>📋</span>
+								<span>프리셋</span>
+							</button>
+						</div>
+
+						{/* 프리셋 목록 */}
+						{showPresets && (
+							<div className="mt-4 space-y-2">
+								<p className="text-xs text-[#8888aa] mb-2">기본 프리셋</p>
+								{DEFAULT_PRESETS.map((preset) => (
+									<button
+										key={preset.id}
+										onClick={() => handlePresetApply(preset)}
+										className="preset-card w-full text-left"
+									>
+										<div className="flex items-center gap-3">
+											<div className="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-[rgba(0,212,255,0.1)] to-[rgba(168,85,247,0.1)] flex-shrink-0">
+												<LayeredAvatar config={preset.config} size={40} />
+											</div>
+											<div>
+												<p className="text-sm font-medium">{preset.name}</p>
+												<p className="text-xs text-[#8888aa]">
+													{preset.description}
+												</p>
+											</div>
+										</div>
+									</button>
+								))}
+							</div>
+						)}
+					</PixelBox>
+				</div>
+
+				{/* 커스터마이징 패널 */}
+				<div className="col-span-12 md:col-span-8">
+					{/* 카테고리 탭 */}
+					<div className="mb-5">
+						<CategoryTabs
+							categories={CUSTOMIZE_CATEGORIES}
+							activeCategory={activeCategory}
+							onCategoryChange={(id) =>
+								setActiveCategory(id as CustomizeCategory)
+							}
+						/>
+					</div>
+
+					{/* 카테고리 컨텐츠 */}
+					<PixelBox className="p-5 min-h-[500px]">
+						{renderCategoryContent()}
+					</PixelBox>
+				</div>
+			</div>
+
+			{/* 모바일 하단 액션바 */}
+			<div className="mobile-action-bar md:hidden">
+				<button
+					onClick={undo}
+					disabled={!canUndo}
+					className="history-btn"
+					title="실행 취소"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M3 7v6h6" />
+						<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+					</svg>
+				</button>
+				<button
+					onClick={redo}
+					disabled={!canRedo}
+					className="history-btn"
+					title="다시 실행"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M21 7v6h-6" />
+						<path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+					</svg>
+				</button>
+				<button onClick={randomizeAvatar} className="action-btn">
+					<span className="dice-icon">🎲</span>
+				</button>
+				<button
+					onClick={() => setShowPresets(!showPresets)}
+					className="action-btn"
+				>
+					<span>📋</span>
+				</button>
+			</div>
+		</div>
+	);
 }

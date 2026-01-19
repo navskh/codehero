@@ -18,12 +18,14 @@ interface IGameStore extends IGameState {
   // Actions
   addXP: (amount: number, source: XPSourceType) => { leveledUp: boolean; newLevel: number };
   calculateTaskXP: (difficulty: TaskDifficulty, tags: TaskTag[]) => number;
-  checkAndUpdateStreak: () => void;
+  checkAndUpdateStreak: () => { isNewCheckIn: boolean; bonusXP: number };
+  isCheckedInToday: () => boolean;
   incrementStat: (stat: keyof IStats, amount?: number) => void;
   useSkillPoints: (amount: number) => boolean;
   addSkillPoints: (amount: number) => void;
   getXPToNextLevel: () => number;
   getCurrentLevelInfo: () => { level: number; title: string; requiredXP: number };
+  syncFromNotion: (totalXP: number) => void;
   reset: () => void;
 }
 
@@ -113,7 +115,7 @@ export const useGameStore = create<IGameStore>()(
 
         if (lastActive === today) {
           // 이미 오늘 활동함
-          return;
+          return { isNewCheckIn: false, bonusXP: 0 };
         }
 
         const yesterday = new Date();
@@ -146,11 +148,23 @@ export const useGameStore = create<IGameStore>()(
           },
         });
 
-        // 연속 출석 보너스 XP
+        // 연속 출석 보너스 XP (첫날은 daily_login, 연속시 streak_bonus 추가)
+        let bonusXP = BASE_XP.daily_login;
+        get().addXP(bonusXP, 'daily_login');
+
         if (newCurrent > 1) {
           const streakBonus = BASE_XP.streak_bonus * Math.min(newCurrent, 30);
           get().addXP(streakBonus, 'streak_bonus');
+          bonusXP += streakBonus;
         }
+
+        return { isNewCheckIn: true, bonusXP };
+      },
+
+      isCheckedInToday: () => {
+        const state = get();
+        const today = getTodayString();
+        return state.streak.lastActiveDate === today;
       },
 
       incrementStat: (stat, amount = 1) => {
@@ -191,6 +205,29 @@ export const useGameStore = create<IGameStore>()(
         const state = get();
         const levelInfo = LEVEL_TABLE[state.level - 1] || LEVEL_TABLE[0];
         return levelInfo;
+      },
+
+      syncFromNotion: (notionTotalXP: number) => {
+        // Notion 분석 결과로 레벨 동기화
+        let newLevel = 1;
+        for (let i = 0; i < LEVEL_TABLE.length; i++) {
+          if (notionTotalXP >= LEVEL_TABLE[i].requiredXP) {
+            newLevel = LEVEL_TABLE[i].level;
+          } else {
+            break;
+          }
+        }
+
+        // 현재 레벨의 시작 XP (LEVEL_TABLE은 0-indexed, level은 1-indexed)
+        // Level 12 → LEVEL_TABLE[11] = { level: 12, requiredXP: 6600 }
+        const currentLevelStartXP = LEVEL_TABLE[newLevel - 1]?.requiredXP || 0;
+        const newCurrentXP = notionTotalXP - currentLevelStartXP;
+
+        set({
+          level: newLevel,
+          totalXP: notionTotalXP,
+          currentXP: newCurrentXP,
+        });
       },
 
       reset: () => {

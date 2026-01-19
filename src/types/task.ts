@@ -2,6 +2,22 @@
 
 import type { TaskDifficulty, TaskTag } from './common';
 
+// ============================================
+// 블록 기반 할일 추출용 타입
+// ============================================
+
+export type TodoBlockType = 'todo' | 'text' | 'bullet';
+
+export interface ITodoItem {
+  id: string;           // 블록 ID
+  pageId: string;       // 소속 페이지 ID
+  pageTitle: string;    // 소속 페이지 제목
+  pageUrl: string;      // 소속 페이지 URL
+  text: string;         // 할일 내용
+  isCompleted: boolean; // 완료 여부
+  type: TodoBlockType;  // 블록 타입
+}
+
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 export interface ITask {

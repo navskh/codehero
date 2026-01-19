@@ -32,8 +32,8 @@ const initialAvatar: IAvatar = {
   },
   equipment: {
     hair: 'hair_short_black',
-    outfit: 'outfit_casual',
-    accessory: null,
+    outfit: 'outfit_hoodie',
+    accessory: 'acc_glasses',
     background: 'bg_home',
     effect: null,
   },

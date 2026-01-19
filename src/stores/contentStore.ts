@@ -13,6 +13,7 @@ import { analyzePageFull } from '../lib/contentAnalyzer';
 export interface IAnalysisCache {
   pageId: string;
   title: string;
+  url: string;               // 페이지 URL
   lastAnalyzed: string;      // 분석 시점
   lastEditedTime: string;    // 페이지 수정 시점
   workType: WorkType;
@@ -35,7 +36,7 @@ interface IContentStore extends IContentState {
   getCachedAnalysis: (pageId: string, lastEditedTime: string) => IAnalysisCache | null;
 
   // 분석 결과 저장
-  saveAnalysis: (pageId: string, lastEditedTime: string, analysis: FullPageAnalysis) => void;
+  saveAnalysis: (pageId: string, url: string, lastEditedTime: string, analysis: FullPageAnalysis) => void;
 
   // 전체 스킬 XP 재계산
   recalculateTotalSkillXP: () => SkillXP;
@@ -81,10 +82,11 @@ export const useContentStore = create<IContentStore>()(
         return cached;
       },
 
-      saveAnalysis: (pageId, lastEditedTime, analysis) => {
+      saveAnalysis: (pageId, url, lastEditedTime, analysis) => {
         const cacheEntry: IAnalysisCache = {
           pageId,
           title: analysis.title,
+          url,
           lastAnalyzed: new Date().toISOString(),
           lastEditedTime,
           workType: analysis.workType,
@@ -162,6 +164,7 @@ export const useContentStore = create<IContentStore>()(
 export interface NotionPageInfo {
   id: string;
   title: string;
+  url: string;
   lastEditedTime: string;
 }
 
@@ -205,7 +208,7 @@ export async function analyzePageWithCache(
   const analysis = analyzePageFull(page.title, blocks);
 
   // 3. 결과 캐시에 저장
-  store.saveAnalysis(page.id, page.lastEditedTime, analysis);
+  store.saveAnalysis(page.id, page.url, page.lastEditedTime, analysis);
 
   return analysis;
 }
@@ -253,7 +256,7 @@ export async function analyzeAllPages(
       analyzed++;
       const blocks = await fetchBlocks(page.id);
       const analysis = analyzePageFull(page.title, blocks);
-      store.saveAnalysis(page.id, page.lastEditedTime, analysis);
+      store.saveAnalysis(page.id, page.url, page.lastEditedTime, analysis);
       results.push(analysis);
     }
 

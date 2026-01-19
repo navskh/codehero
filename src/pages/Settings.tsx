@@ -47,7 +47,7 @@ export function Settings() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="font-pixel text-2xl gradient-text mb-2">설정</h1>
+        <h1 className="page-title gradient-text mb-2">설정</h1>
         <p className="text-[#8888aa] text-sm">앱 설정 및 Notion 연동을 관리합니다</p>
       </div>
 

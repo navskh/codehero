@@ -29,18 +29,25 @@ async function fetchNotionAll(): Promise<INotionAllResponse> {
   return data;
 }
 
-export function useNotionAll() {
+export function useNotionAll(options?: { enabled?: boolean }) {
+  const { enabled = false } = options || {};
+
   return useQuery({
     queryKey: ['notion-all'],
     queryFn: fetchNotionAll,
     staleTime: 1000 * 60 * 5, // 5분
     retry: 1,
+    enabled, // 기본 false - 동기화 버튼 누를 때만 fetch
   });
 }
 
 // 유틸: 상대 시간 표시
-export function getRelativeTime(dateString: string): string {
+export function getRelativeTime(dateString: string | null | undefined): string {
+  if (!dateString) return '-';
+
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '-';
+
   const now = new Date();
   const diff = now.getTime() - date.getTime();
 
